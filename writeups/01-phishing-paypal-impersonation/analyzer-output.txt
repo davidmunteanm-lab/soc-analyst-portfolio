@@ -1,5 +1,5 @@
 ﻿======================================================================
-PHISHING ANALYSIS REPORT ΓÇö sample-emails\phishing-paypal.eml
+PHISHING ANALYSIS REPORT — sample-emails\phishing-paypal.eml
 ======================================================================
 
 [+] Sender
@@ -24,11 +24,11 @@ PHISHING ANALYSIS REPORT ΓÇö sample-emails\phishing-paypal.eml
     DMARC : FAIL/missing
 
 [+] URLs found: 2
+    [!] http://198.51.100.42/paypal-verify/login.php
+        -> URL uses raw IP
     [!] https://paypa1.secure-login.verify.account.update.tk/index.html
         -> suspicious TLD (.tk)
         -> excessive subdomains
-    [!] http://198.51.100.42/paypal-verify/login.php
-        -> URL uses raw IP
 
 [+] Attachments: 0
 
@@ -50,7 +50,7 @@ VERDICT: LIKELY PHISHING   (risk score: 27)
   - Authentication-Results: SPF did not pass
   - Authentication-Results: DKIM did not pass
   - Authentication-Results: DMARC did not pass
-  - Risky URL: https://paypa1.secure-login.verify.account.update.tk/index.html (suspicious TLD (.tk), excessive subdomains)
   - Risky URL: http://198.51.100.42/paypal-verify/login.php (URL uses raw IP)
+  - Risky URL: https://paypa1.secure-login.verify.account.update.tk/index.html (suspicious TLD (.tk), excessive subdomains)
   - Suspicious keywords: urgent, click here immediately, suspended, confirm your identity, unusual activity, act now
 ======================================================================
