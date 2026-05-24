@@ -1,0 +1,56 @@
+﻿======================================================================
+PHISHING ANALYSIS REPORT ΓÇö sample-emails\phishing-paypal.eml
+======================================================================
+
+[+] Sender
+    Name        : PayPal Security
+    Address     : security@paypa1-verify.tk
+    Domain      : paypa1-verify.tk
+    Reply-To    : noreply@randommailbox123.gq
+    Return-Path : bounce@spam-relay-server.tk
+
+[+] Message
+    Subject     : URGENT: Your account has been suspended - Verify immediately
+    Date        : Sun, 24 May 2026 03:47:00 +0000
+    Hops        : 0
+
+[+] Authentication (DNS)
+    SPF present   : False
+    DMARC present : False
+
+[+] Authentication (received headers)
+    SPF   : FAIL/missing
+    DKIM  : FAIL/missing
+    DMARC : FAIL/missing
+
+[+] URLs found: 2
+    [!] https://paypa1.secure-login.verify.account.update.tk/index.html
+        -> suspicious TLD (.tk)
+        -> excessive subdomains
+    [!] http://198.51.100.42/paypal-verify/login.php
+        -> URL uses raw IP
+
+[+] Attachments: 0
+
+[+] Suspicious keywords: 6
+    - urgent
+    - click here immediately
+    - suspended
+    - confirm your identity
+    - unusual activity
+    - act now
+
+======================================================================
+VERDICT: LIKELY PHISHING   (risk score: 27)
+======================================================================
+  - Reply-To (noreply@randommailbox123.gq) differs from From (security@paypa1-verify.tk)
+  - Return-Path (bounce@spam-relay-server.tk) differs from From (security@paypa1-verify.tk)
+  - Sender domain has no SPF record
+  - Sender domain has no DMARC record
+  - Authentication-Results: SPF did not pass
+  - Authentication-Results: DKIM did not pass
+  - Authentication-Results: DMARC did not pass
+  - Risky URL: https://paypa1.secure-login.verify.account.update.tk/index.html (suspicious TLD (.tk), excessive subdomains)
+  - Risky URL: http://198.51.100.42/paypal-verify/login.php (URL uses raw IP)
+  - Suspicious keywords: urgent, click here immediately, suspended, confirm your identity, unusual activity, act now
+======================================================================

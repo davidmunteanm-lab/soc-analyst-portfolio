@@ -16,14 +16,15 @@ Security tooling I've written from scratch. Each tool ships with its own README,
 - **[phishing-analyzer](tools/phishing-analyzer/)** — Static analyzer for `.eml` files. Inspects headers, SPF/DMARC, URLs, attachments (SHA-256), and social engineering keywords; outputs a weighted risk score and verdict.
 
 ### `writeups/`
-Investigation reports from labs I've worked through (Blue Team Labs Online, TryHackMe, CyberDefenders). Each writeup follows the same structure: scenario, artifacts examined, methodology, findings, IOCs, recommended response.
+Investigation reports from labs and simulated scenarios. Each writeup follows the same structure: scenario, artefacts examined, methodology, findings, IOCs, recommended response.
 
-*Coming soon — first writeup in progress.*
+- **[01 — PayPal Impersonation Phishing](writeups/01-phishing-paypal-impersonation/writeup.md)** — Full investigation of a self-authored simulated phishing email; demonstrates header analysis, authentication checks, URL triage, and Tier-1 SOC response workflow.
 
 ### `notes/`
-Topical notes I take while studying: MITRE ATT&CK techniques mapped to detections, useful Splunk SPL queries, log-source references.
+Topical notes I take while studying. Currently published:
 
-*Coming soon.*
+- **[Splunk SPL cheatsheet](notes/splunk-spl-cheatsheet.md)** — SPL queries I keep reaching for during investigations.
+- **[MITRE ATT&CK quick reference](notes/mitre-techniques-quick-reference.md)** — Common techniques mapped to log artefacts.
 
 ## Background
 
