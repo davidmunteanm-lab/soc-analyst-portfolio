@@ -1,5 +1,9 @@
 # SOC Analyst Portfolio
 
+[![CI](https://github.com/davidmunteanm-lab/soc-analyst-portfolio/actions/workflows/ci.yml/badge.svg)](https://github.com/davidmunteanm-lab/soc-analyst-portfolio/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Personal portfolio documenting my transition from backend development into Security Operations and defensive cybersecurity. This repo holds the tools I build, the investigations I write up, and the notes I take along the way.
 
 I'm currently a TryHackMe SAL1-certified analyst with a backend development background (Salesforce / Apex / Java), preparing for the Microsoft SC-900 certification.
