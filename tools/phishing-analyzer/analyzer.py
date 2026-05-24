@@ -16,9 +16,12 @@ import re
 import sys
 from email.utils import parseaddr
 from pathlib import Path
+from typing import Optional
 
 import dns.resolver
 import dns.exception
+
+from virustotal import VirusTotalClient, VirusTotalError
 
 
 # ----- Configuration -----
@@ -246,6 +249,43 @@ def check_keywords(msg: email.message.EmailMessage) -> list:
     return hits
 
 
+# ----- VirusTotal Enrichment -----
+
+def enrich_with_virustotal(client: VirusTotalClient, report: dict) -> dict:
+    """Check every attachment hash and URL against VirusTotal."""
+    results = []
+
+    for att in report["attachments"]:
+        sha256 = att.get("sha256")
+        if not sha256:
+            continue
+        try:
+            lookup = client.lookup_file_hash(sha256)
+        except VirusTotalError as exc:
+            results.append({
+                "target": att["filename"], "kind": "file",
+                "error": str(exc),
+            })
+            continue
+        lookup["target"] = att["filename"]
+        results.append(lookup)
+
+    for url_info in report["urls"]:
+        url = url_info["url"]
+        try:
+            lookup = client.lookup_url(url)
+        except VirusTotalError as exc:
+            results.append({
+                "target": url, "kind": "url",
+                "error": str(exc),
+            })
+            continue
+        lookup["target"] = url
+        results.append(lookup)
+
+    return {"enabled": True, "results": results}
+
+
 # ----- Verdict -----
 
 def calculate_verdict(report: dict) -> dict:
@@ -253,12 +293,10 @@ def calculate_verdict(report: dict) -> dict:
     score = 0
     reasons = []
 
-    # Header mismatches — strong signal
     if report["headers"]["mismatches"]:
         score += 3 * len(report["headers"]["mismatches"])
         reasons.extend(report["headers"]["mismatches"])
 
-    # Missing authentication infrastructure
     auth_dns = report["auth_dns"]
     if not auth_dns["spf_present"]:
         score += 2
@@ -267,7 +305,6 @@ def calculate_verdict(report: dict) -> dict:
         score += 2
         reasons.append("Sender domain has no DMARC record")
 
-    # Authentication failed at receiving MTA
     auth_hdr = report["auth_header"]
     if auth_hdr["raw"]:
         if not auth_hdr["spf_pass"]:
@@ -280,22 +317,38 @@ def calculate_verdict(report: dict) -> dict:
             score += 3
             reasons.append("Authentication-Results: DMARC did not pass")
 
-    # Risky URLs
     for u in report["urls"]:
         if u["flags"]:
             score += 2
             reasons.append(f"Risky URL: {u['url']} ({', '.join(u['flags'])})")
 
-    # Risky attachments
     for a in report["attachments"]:
         if a["suspicious_extension"]:
             score += 4
             reasons.append(f"Dangerous attachment: {a['filename']}")
 
-    # Social engineering keywords
     if report["keywords"]:
         score += len(report["keywords"])
         reasons.append(f"Suspicious keywords: {', '.join(report['keywords'])}")
+
+    # VirusTotal hits — strongest signal we have
+    vt = report.get("virustotal", {})
+    if vt.get("enabled"):
+        for r in vt.get("results", []):
+            if r.get("error") or r.get("unknown"):
+                continue
+            malicious = r.get("malicious", 0)
+            suspicious = r.get("suspicious", 0)
+            if malicious >= 5:
+                score += 8
+                reasons.append(
+                    f"VirusTotal: {malicious} engines flagged {r['target']} as malicious"
+                )
+            elif malicious >= 1 or suspicious >= 3:
+                score += 4
+                reasons.append(
+                    f"VirusTotal: {malicious} malicious / {suspicious} suspicious for {r['target']}"
+                )
 
     if score >= 8:
         verdict = "LIKELY PHISHING"
@@ -309,7 +362,7 @@ def calculate_verdict(report: dict) -> dict:
 
 # ----- Reporting -----
 
-def build_report(file_path: Path) -> dict:
+def build_report(file_path: Path, vt_client: Optional[VirusTotalClient] = None) -> dict:
     """Run every analyzer on the email and return a structured report."""
     msg = parse_email(file_path)
     headers = analyze_headers(msg)
@@ -322,7 +375,12 @@ def build_report(file_path: Path) -> dict:
         "urls": extract_urls(msg),
         "attachments": extract_attachments(msg),
         "keywords": check_keywords(msg),
+        "virustotal": {"enabled": False, "results": []},
     }
+
+    if vt_client and vt_client.enabled:
+        report["virustotal"] = enrich_with_virustotal(vt_client, report)
+
     report["verdict"] = calculate_verdict(report)
     return report
 
@@ -380,6 +438,23 @@ def print_report(report: dict) -> None:
     for kw in report["keywords"]:
         print(f"    - {kw}")
 
+    vt = report.get("virustotal", {})
+    if vt.get("enabled"):
+        print(f"\n[+] VirusTotal: {len(vt.get('results', []))} lookups")
+        for r in vt["results"]:
+            target = r.get("target", "(unknown)")
+            if "error" in r:
+                print(f"    [?] {target}  ERROR: {r['error']}")
+                continue
+            if r.get("unknown"):
+                print(f"    [?] {target}  (not seen by VT)")
+                continue
+            mal = r.get("malicious", 0)
+            sus = r.get("suspicious", 0)
+            total = r.get("total_engines", 0)
+            marker = "!" if mal >= 1 else "-"
+            print(f"    [{marker}] {target}  {mal} malicious / {sus} suspicious / {total} engines")
+
     print(f"\n{line}")
     print(f"VERDICT: {v['verdict']}   (risk score: {v['score']})")
     print(line)
@@ -401,10 +476,25 @@ def main() -> int:
         "--json", action="store_true",
         help="Output as JSON instead of human-readable report"
     )
+    parser.add_argument(
+        "--no-vt", action="store_true",
+        help="Skip VirusTotal lookups (even if VT_API_KEY is set)"
+    )
     args = parser.parse_args()
 
+    vt_client = None
+    if not args.no_vt:
+        client = VirusTotalClient()
+        if client.enabled:
+            vt_client = client
+        else:
+            print(
+                "[info] VT_API_KEY not set — skipping VirusTotal lookups.",
+                file=sys.stderr,
+            )
+
     try:
-        report = build_report(Path(args.email_file))
+        report = build_report(Path(args.email_file), vt_client=vt_client)
     except (FileNotFoundError, ValueError) as exc:
         print(f"[ERROR] {exc}", file=sys.stderr)
         return 1
